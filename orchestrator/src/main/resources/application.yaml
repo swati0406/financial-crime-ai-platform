@@ -1,0 +1,70 @@
+server:
+  port: 8080
+
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: "singh.swati88@gmail.com"
+    password: "abcd efgh ijkl mnop"
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/ragdb}
+    username: ${DATABASE_USERNAME:raguser}
+    password: ${DATABASE_PASSWORD:ragpass}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  sql:
+    init:
+      mode: always
+
+management:
+  health:
+    mail:
+      enabled: false
+
+services:
+  customer: ${CUSTOMER_SERVICE_URL:http://localhost:8081}
+  fraud: ${FRAUD_SERVICE_URL:http://localhost:8082}
+  sanctions: ${SANCTIONS_SERVICE_URL:http://localhost:8083}
+  payment: ${PAYMENT_SERVICE_URL:http://localhost:8084}
+  audit: ${AUDIT_SERVICE_URL:http://localhost:8085}
+
+openrouter:
+  base-url: "https://openrouter.ai/api/v1"
+  api-key: ${OPENROUTER_API_KEY}
+  model: ${OPENROUTER_MODEL:google/gemini-2.0-flash-lite-001}
+  embedding-model: ${EMBEDDING_MODEL:text-embedding-3-small}
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      llm:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+
+  ratelimiter:
+    instances:
+      llm:
+        limitForPeriod: 5
+        limitRefreshPeriod: 1s
+        timeoutDuration: 0
+
+  retry:
+    instances:
+      llm:
+        maxAttempts: 3
+        waitDuration: 200ms
+
+
+logging:
+  level:
+    io.github.resilience4j: DEBUG
