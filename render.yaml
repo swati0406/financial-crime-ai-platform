@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: financial-crime-ai-orchestrator
+    runtime: docker
+    dockerfilePath: ./orchestrator/Dockerfile
+    plan: free
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
