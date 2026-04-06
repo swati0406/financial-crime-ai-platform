@@ -1,3 +1,4 @@
+/*
 package co.eaiwo.service;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -128,5 +129,88 @@ public class MicroserviceClient {
                 .retrieve()
                 .bodyToMono(Map.class)
                 .block();
+    }
+}*/
+
+package co.eaiwo.service;
+
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+@Service
+public class MicroserviceClient {
+
+    private final JdbcTemplate jdbc;
+
+    public MicroserviceClient(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    public Map getCustomerProfile(String customerId) {
+        try {
+            return jdbc.queryForMap(
+                    "SELECT * FROM customer.customers WHERE customer_id = ?", customerId);
+        } catch (Exception e) {
+            return Map.of("error", "Customer not found: " + customerId);
+        }
+    }
+
+    public Map getFraudScore(String customerId) {
+        try {
+            return jdbc.queryForMap(
+                    "SELECT * FROM fraud.fraud_scores WHERE customer_id = ?", customerId);
+        } catch (Exception e) {
+            return Map.of("error", "Fraud score not found: " + customerId);
+        }
+    }
+
+    public Object getTransactionHistory(String customerId) {
+        return jdbc.queryForList(
+                "SELECT * FROM fraud.transactions WHERE customer_id = ?", customerId);
+    }
+
+    public Map sanctionsCheck(String name) {
+        List<Map<String, Object>> matches = jdbc.queryForList(
+                "SELECT * FROM sanctions.sanctions_list WHERE LOWER(entity_name) LIKE LOWER(?) AND status = 'ACTIVE'",
+                "%" + name + "%");
+        if (matches.isEmpty()) {
+            return Map.of("status", "CLEAR", "message", name + " — no matches found across OFAC SDN, UK Consolidated, UN Security Council and EU sanctions lists.");
+        }
+        Map<String, Object> match = matches.get(0);
+        return Map.of(
+                "status", "MATCH",
+                "entityName", match.get("entity_name"),
+                "listType", match.get("list_type"),
+                "country", match.get("country"),
+                "reason", match.get("reason")
+        );
+    }
+
+    public Object getPaymentsByCustomer(String customerId) {
+        return jdbc.queryForList(
+                "SELECT * FROM payment.payments WHERE customer_id = ?", customerId);
+    }
+
+    public Object getFlaggedPayments() {
+        return jdbc.queryForList(
+                "SELECT * FROM payment.payments WHERE status IN ('FLAGGED','BLOCKED') ORDER BY risk_score DESC");
+    }
+
+    public Map createAuditLog(String eventType, String customerId,
+                              String performedBy, String outcome, String details) {
+        jdbc.update(
+                "INSERT INTO audit.audit_logs (event_type, customer_id, performed_by, outcome, details) VALUES (?,?,?,?,?)",
+                eventType, customerId, performedBy, outcome, details);
+        return Map.of("status", "LOGGED", "customerId", customerId, "eventType", eventType);
+    }
+
+    public Map createAlert(String alertType, String severity,
+                           String customerId, String recipient, String message) {
+        jdbc.update(
+                "INSERT INTO audit.alerts (alert_type, severity, customer_id, recipient, message, status) VALUES (?,?,?,?,?,?)",
+                alertType, severity, customerId, recipient, message, "SENT");
+        return Map.of("status", "SENT", "alertType", alertType, "customerId", customerId);
     }
 }
