@@ -1,13 +1,18 @@
 FROM maven:3.9-eclipse-temurin-21-alpine AS build
 WORKDIR /app
 
-# Copy root pom + orchestrator pom for dependency caching
+# Copy root pom + ALL module poms
 COPY pom.xml .
 COPY orchestrator/pom.xml orchestrator/
+COPY customer-service/pom.xml customer-service/
+COPY fraud-service/pom.xml fraud-service/
+COPY payment-service/pom.xml payment-service/
+COPY sanctions-service/pom.xml sanctions-service/
+COPY audit-service/pom.xml audit-service/
 
 RUN mvn dependency:go-offline -pl orchestrator -am -q
 
-# Copy source and build
+# Copy only orchestrator source and build
 COPY orchestrator/src orchestrator/src
 RUN mvn package -pl orchestrator -am -DskipTests -q
 
